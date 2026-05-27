@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FitIA – Tu entrenador personal con IA</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fire:#FF4D00;--fire2:#FF8C00;--gold:#FFD700;
+  --dark:#0A0805;--dark2:#120F0A;--dark3:#1A1510;--surface:#221C14;--surface2:#2A231A;
+  --text:#FFF8F0;--text2:#A89880;--text3:#5A4A3A;
+  --border:rgba(255,77,0,0.12);--border2:rgba(255,77,0,0.25);
+  --radius:20px;--radius-sm:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--dark)}::-webkit-scrollbar-thumb{background:var(--fire);border-radius:2px}
+
+/* SPLASH */
+.splash{position:fixed;inset:0;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;animation:splashOut 0.5s ease 2.5s forwards}
+@keyframes splashOut{to{opacity:0;pointer-events:none;visibility:hidden}}
+.splash-logo{font-family:'Bebas Neue',sans-serif;font-size:80px;color:var(--fire);letter-spacing:4px;animation:logoIn 0.8s ease 0.3s both}
+.splash-sub{font-size:16px;color:var(--text2);letter-spacing:3px;text-transform:uppercase;animation:logoIn 0.8s ease 0.6s both}
+.splash-bar{width:200px;height:3px;background:var(--surface2);border-radius:2px;margin-top:40px;overflow:hidden;animation:logoIn 0.5s ease 0.9s both}
+.splash-progress{height:3px;background:linear-gradient(90deg,var(--fire),var(--fire2));border-radius:2px;animation:progress 1.8s ease 0.9s both}
+@keyframes logoIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes progress{from{width:0}to{width:100%}}
+
+/* ONBOARDING */
+.onboard{display:none;position:fixed;inset:0;z-index:500;background:var(--dark);overflow-y:auto;padding:24px 20px 40px}
+.onboard.active{display:block}
+.ob-step{display:none}
+.ob-step.active{display:block;animation:fadeSlide .3s ease}
+@keyframes fadeSlide{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.ob-progress{display:flex;gap:6px;margin-bottom:32px}
+.ob-dot{flex:1;height:4px;border-radius:2px;background:var(--surface2);transition:background .3s}
+.ob-dot.done{background:var(--fire)}
+.ob-title{font-family:'Bebas Neue',sans-serif;font-size:38px;color:var(--text);line-height:1.1;margin-bottom:8px}
+.ob-title span{color:var(--fire)}
+.ob-sub{font-size:14px;color:var(--text2);margin-bottom:32px;line-height:1.6}
+.ob-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px}
+.ob-option{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:16px 12px;text-align:center;cursor:pointer;transition:all .2s}
+.ob-option:hover,.ob-option.selected{background:rgba(255,77,0,0.1);border-color:var(--fire)}
+.ob-option-ico{font-size:28px;margin-bottom:8px}
+.ob-option-label{font-size:13px;font-weight:500;color:var(--text)}
+.ob-option-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.ob-field{margin-bottom:16px}
+.ob-field label{display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+.ob-input{width:100%;padding:13px 16px;background:var(--surface);border:1.5px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);outline:none;transition:all .2s}
+.ob-input:focus{border-color:var(--fire);background:var(--surface2)}
+.ob-input::placeholder{color:var(--text3)}
+select.ob-input{appearance:none}
+.btn-fire{width:100%;padding:16px;background:linear-gradient(135deg,var(--fire),var(--fire2));color:white;border:none;border-radius:var(--radius-sm);font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;cursor:pointer;transition:all .2s;margin-top:8px}
+.btn-fire:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,77,0,0.4)}
+.btn-outline{width:100%;padding:13px;background:none;border:1.5px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text2);cursor:pointer;margin-top:8px}
+
+/* MAIN APP */
+.app{display:none;max-width:430px;margin:0 auto;padding:0 0 90px}
+.app.active{display:block}
+
+/* HEADER */
+.app-header{padding:20px 20px 0;margin-bottom:20px}
+.app-header-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.app-greeting{font-size:13px;color:var(--text2)}
+.app-name{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--text);letter-spacing:1px}
+.app-name span{color:var(--fire)}
+.header-right{display:flex;align-items:center;gap:10px}
+.streak-badge{display:flex;align-items:center;gap:4px;background:rgba(255,77,0,0.12);border:1px solid var(--border2);border-radius:20px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--fire)}
+.avatar-btn{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--fire),var(--fire2));display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:16px;color:white;cursor:pointer}
+
+/* HERO CARD */
+.hero-card{margin:0 16px 16px;background:linear-gradient(135deg,var(--fire) 0%,#CC3D00 60%,#8B2000 100%);border-radius:24px;padding:22px 20px;position:relative;overflow:hidden}
+.hero-card::before{content:'';position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,0.06)}
+.hero-card::after{content:'💪';position:absolute;right:20px;bottom:-10px;font-size:80px;opacity:0.15}
+.hero-label{font-size:12px;color:rgba(255,255,255,0.75);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em}
+.hero-title{font-family:'Bebas Neue',sans-serif;font-size:32px;color:white;line-height:1.1;margin-bottom:16px}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hero-stat{background:rgba(0,0,0,0.2);border-radius:10px;padding:10px 8px;text-align:center}
+.hero-stat-val{font-family:'Bebas Neue',sans-serif;font-size:22px;color:white}
+.hero-stat-label{font-size:10px;color:rgba(255,255,255,0.7);text-transform:uppercase}
+
+/* PLAN CARD */
+.plan-card{margin:0 16px 16px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:16px}
+.plan-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.plan-title{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text);letter-spacing:1px}
+.plan-day{font-size:12px;color:var(--fire);font-weight:600;background:rgba(255,77,0,0.1);padding:3px 10px;border-radius:10px}
+.exercise-list{display:flex;flex-direction:column;gap:8px}
+.exercise-item{display:flex;align-items:center;gap:12px;background:var(--dark3);border-radius:12px;padding:10px 12px;cursor:pointer;transition:background .15s}
+.exercise-item:hover{background:var(--surface2)}
+.exercise-item.done{opacity:0.5}
+.exercise-ico{width:38px;height:38px;border-radius:10px;background:rgba(255,77,0,0.12);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.exercise-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px}
+.exercise-meta{font-size:11px;color:var(--text2)}
+.exercise-check{width:24px;height:24px;border-radius:50%;border:2px solid var(--border2);margin-left:auto;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;cursor:pointer;transition:all .2s}
+.exercise-check.done{background:var(--fire);border-color:var(--fire);color:white}
+
+/* SECTION */
+.section{padding:0 16px;margin-bottom:16px}
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--text);letter-spacing:1px}
+.section-link{font-size:12px;color:var(--fire);cursor:pointer;font-weight:500}
+
+/* CATEGORY GRID */
+.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cat-card{border-radius:16px;padding:18px 14px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;border:1px solid var(--border)}
+.cat-card:hover{transform:translateY(-2px)}
+.cat-card-ico{font-size:32px;margin-bottom:10px}
+.cat-card-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;margin-bottom:4px}
+.cat-card-sub{font-size:11px;color:var(--text2)}
+
+/* SHAKE CARDS */
+.shake-scroll{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}
+.shake-scroll::-webkit-scrollbar{display:none}
+.shake-card{flex-shrink:0;width:160px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;cursor:pointer;transition:all .2s}
+.shake-card:hover{border-color:var(--fire)}
+.shake-ico{font-size:32px;margin-bottom:8px}
+.shake-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px}
+.shake-goal{font-size:11px;color:var(--fire);background:rgba(255,77,0,0.1);padding:2px 8px;border-radius:10px;display:inline-block}
+.shake-cal{font-size:11px;color:var(--text2);margin-top:4px}
+
+/* TIP CARD */
+.tip-card{margin:0 16px 16px;background:linear-gradient(135deg,rgba(255,77,0,0.08),rgba(255,140,0,0.05));border:1px solid var(--border2);border-radius:20px;padding:16px}
+.tip-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.tip-dot{width:8px;height:8px;border-radius:50%;background:var(--fire);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.tip-badge{font-size:11px;font-weight:600;color:var(--fire);text-transform:uppercase;letter-spacing:.06em}
+.tip-text{font-size:13px;color:var(--text2);line-height:1.6}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(10,8,5,0.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:10px 0 18px;z-index:50}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;font-weight:500;color:var(--text3);cursor:pointer;padding:4px 20px;border:none;background:none;font-family:'DM Sans',sans-serif;transition:all .2s}
+.nav-item.active{color:var(--fire)}
+.nav-icon{font-size:22px;line-height:1}
+
+/* PAGES */
+.page{display:none;animation:fadeSlide .3s ease}
+.page.active{display:block}
+
+/* GYM/HOME EXERCISES */
+.filter-bar{display:flex;gap:8px;overflow-x:auto;padding:0 16px 16px;scrollbar-width:none}
+.filter-bar::-webkit-scrollbar{display:none}
+.filter-btn{flex-shrink:0;padding:7px 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .2s;white-space:nowrap}
+.filter-btn.active{background:rgba(255,77,0,0.12);border-color:var(--fire);color:var(--fire)}
+.exercise-grid{padding:0 16px;display:flex;flex-direction:column;gap:10px}
+.ex-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;display:flex;gap:12px;cursor:pointer;transition:all .2s}
+.ex-card:hover{border-color:var(--fire);background:var(--surface2)}
+.ex-card-ico{width:52px;height:52px;border-radius:12px;background:rgba(255,77,0,0.12);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.ex-card-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px}
+.ex-card-meta{font-size:11px;color:var(--text2);margin-bottom:6px}
+.ex-tags{display:flex;gap:5px;flex-wrap:wrap}
+.ex-tag{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-muscle{background:rgba(255,77,0,0.1);color:var(--fire)}
+.tag-weight{background:rgba(255,215,0,0.1);color:var(--gold)}
+.tag-cardio{background:rgba(0,200,100,0.1);color:#00C864}
+
+/* NUTRITION PAGE */
+.macro-card{margin:0 16px 16px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:16px}
+.macro-title{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text);letter-spacing:1px;margin-bottom:14px}
+.macro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.macro-item{background:var(--dark3);border-radius:12px;padding:12px;text-align:center}
+.macro-val{font-family:'Bebas Neue',sans-serif;font-size:24px;margin-bottom:2px}
+.macro-label{font-size:10px;color:var(--text2);text-transform:uppercase}
+.macro-bar-bg{height:8px;background:var(--dark3);border-radius:4px;overflow:hidden;margin-top:10px}
+.macro-bar-fill{height:8px;border-radius:4px}
+
+/* MEAL PLAN */
+.meal-card{margin:0 16px 12px;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;cursor:pointer;transition:all .2s}
+.meal-card:hover{border-color:var(--fire)}
+.meal-header{padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
+.meal-time{font-size:12px;font-weight:600;color:var(--fire);text-transform:uppercase;letter-spacing:.06em}
+.meal-cals{font-size:12px;color:var(--text2);font-family:'DM Mono',monospace}
+.meal-foods{padding:0 14px 12px;display:flex;flex-direction:column;gap:6px}
+.meal-food{display:flex;justify-content:space-between;font-size:13px;color:var(--text2)}
+.meal-food span{color:var(--text)}
+
+/* PREMIUM MODAL */
+.premium-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+.premium-overlay.open{display:flex}
+.premium-modal{background:var(--dark2);border-radius:28px 28px 0 0;padding:28px 20px 40px;width:100%;max-width:430px;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.premium-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 20px}
+.premium-crown{text-align:center;font-size:48px;margin-bottom:12px}
+.premium-title{font-family:'Bebas Neue',sans-serif;font-size:32px;text-align:center;color:var(--gold);letter-spacing:2px;margin-bottom:8px}
+.premium-sub{font-size:14px;color:var(--text2);text-align:center;margin-bottom:24px;line-height:1.6}
+.plans-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.plan-opt{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:16px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.plan-opt.popular{border-color:var(--fire)}
+.popular-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--fire);color:white;font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;white-space:nowrap;text-transform:uppercase}
+.plan-opt-name{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--text);letter-spacing:1px;margin-bottom:4px}
+.plan-opt-price{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--fire);margin-bottom:4px}
+.plan-opt-period{font-size:11px;color:var(--text2)}
+.plan-features{text-align:left;margin-top:10px}
+.plan-feature{font-size:11px;color:var(--text2);padding:3px 0;display:flex;align-items:center;gap:5px}
+.plan-feature::before{content:'✓';color:var(--fire);font-weight:700}
+.btn-gold{width:100%;padding:16px;background:linear-gradient(135deg,var(--gold),#FFA500);color:#0A0805;border:none;border-radius:var(--radius-sm);font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;cursor:pointer;font-weight:700}
+.btn-cancel-modal{width:100%;padding:10px;background:none;border:none;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text2);cursor:pointer;margin-top:8px}
+
+/* TOAST */
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);color:var(--text);padding:12px 22px;border-radius:20px;font-size:13px;font-weight:500;transition:all .3s;z-index:300;white-space:nowrap;border:1px solid var(--border2);opacity:0}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* PROFILE PAGE */
+.profile-hero{margin:0 16px 16px;background:linear-gradient(135deg,var(--surface),var(--dark3));border:1px solid var(--border);border-radius:20px;padding:20px;text-align:center}
+.profile-avatar{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--fire),var(--fire2));display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:28px;color:white;margin:0 auto 12px;border:3px solid var(--fire)}
+.profile-name{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;margin-bottom:4px}
+.profile-goal{font-size:13px;color:var(--fire)}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 16px 16px}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center}
+.stat-box-val{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--fire);margin-bottom:2px}
+.stat-box-label{font-size:10px;color:var(--text2);text-transform:uppercase}
+.progress-card{margin:0 16px 16px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:16px}
+.prog-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px}
+.prog-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.prog-label{font-size:13px;color:var(--text2)}
+.prog-val{font-size:13px;font-weight:600;color:var(--text)}
+.prog-bar-bg{height:8px;background:var(--dark3);border-radius:4px;overflow:hidden;margin-bottom:14px}
+.prog-bar-fill{height:8px;background:linear-gradient(90deg,var(--fire),var(--fire2));border-radius:4px}
+
+/* LOCK OVERLAY */
+.locked{position:relative}
+.lock-overlay{position:absolute;inset:0;background:rgba(10,8,5,0.85);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;backdrop-filter:blur(2px);cursor:pointer}
+.lock-icon{font-size:28px}
+.lock-text{font-size:13px;font-weight:600;color:var(--gold)}
+.lock-sub{font-size:11px;color:var(--text2)}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+
+<!-- AUTH SCREEN -->
+<div id="authScreen" style="display:none;position:fixed;inset:0;background:#0A0805;z-index:998;display:flex;align-items:center;justify-content:center;padding:24px">
+  <div style="width:100%;max-width:380px;background:#1A1510;border:1px solid rgba(255,77,0,0.2);border-radius:24px;padding:32px 24px">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:#FF4D00;letter-spacing:3px">FitIA</div>
+      <div style="font-size:13px;color:#A89880;letter-spacing:2px;text-transform:uppercase">Tu entrenador con IA</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;background:#120F0A;border-radius:12px;padding:4px;margin-bottom:20px">
+      <button id="authTabLogin" onclick="switchAuthTab('login')" style="padding:10px;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;background:#1A1510;color:#FFF8F0;box-shadow:0 1px 4px rgba(0,0,0,0.3)">Iniciar sesión</button>
+      <button id="authTabReg" onclick="switchAuthTab('register')" style="padding:10px;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;background:transparent;color:#A89880">Registrarse</button>
+    </div>
+    <div id="authMsg" style="display:none;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px"></div>
+    <div id="loginForm">
+      <div style="margin-bottom:14px"><label style="display:block;font-size:11px;font-weight:600;color:#A89880;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Correo</label><input id="loginEmail" type="email" placeholder="tucorreo@gmail.com" style="width:100%;padding:12px 14px;background:#120F0A;border:1.5px solid rgba(255,77,0,0.2);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:#FFF8F0;outline:none"></div>
+      <div style="margin-bottom:20px"><label style="display:block;font-size:11px;font-weight:600;color:#A89880;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Contraseña</label><input id="loginPass" type="password" placeholder="Tu contraseña" style="width:100%;padding:12px 14px;background:#120F0A;border:1.5px solid rgba(255,77,0,0.2);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:#FFF8F0;outline:none"></div>
+      <button onclick="doLogin()" style="width:100%;padding:14px;background:linear-gradient(135deg,#FF4D00,#FF8C00);color:white;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;cursor:pointer">ENTRAR →</button>
+    </div>
+    <div id="registerForm" style="display:none">
+      <div style="margin-bottom:14px"><label style="display:block;font-size:11px;font-weight:600;color:#A89880;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Nombre</label><input id="regName" type="text" placeholder="Tu nombre" style="width:100%;padding:12px 14px;background:#120F0A;border:1.5px solid rgba(255,77,0,0.2);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:#FFF8F0;outline:none"></div>
+      <div style="margin-bottom:14px"><label style="display:block;font-size:11px;font-weight:600;color:#A89880;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Correo</label><input id="regEmail" type="email" placeholder="tucorreo@gmail.com" style="width:100%;padding:12px 14px;background:#120F0A;border:1.5px solid rgba(255,77,0,0.2);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:#FFF8F0;outline:none"></div>
+      <div style="margin-bottom:20px"><label style="display:block;font-size:11px;font-weight:600;color:#A89880;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Contraseña</label><input id="regPass" type="password" placeholder="Mínimo 6 caracteres" style="width:100%;padding:12px 14px;background:#120F0A;border:1.5px solid rgba(255,77,0,0.2);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:#FFF8F0;outline:none"></div>
+      <button onclick="doRegister()" style="width:100%;padding:14px;background:linear-gradient(135deg,#FF4D00,#FF8C00);color:white;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;cursor:pointer">CREAR CUENTA →</button>
+    </div>
+  </div>
+</div>
+
+<div class="splash">
+  <div class="splash-logo">FitIA</div>
+  <div class="splash-sub">Tu entrenador personal con IA</div>
+  <div class="splash-bar"><div class="splash-progress"></div></div>
+</div>
+
+<!-- ONBOARDING -->
+<div class="onboard" id="onboard">
+  <div class="ob-progress">
+    <div class="ob-dot done" id="dot1"></div>
+    <div class="ob-dot" id="dot2"></div>
+    <div class="ob-dot" id="dot3"></div>
+    <div class="ob-dot" id="dot4"></div>
+  </div>
+
+  <!-- STEP 1: OBJETIVO -->
+  <div class="ob-step active" id="step1">
+    <div class="ob-title">¿CUÁL ES TU <span>OBJETIVO</span>?</div>
+    <div class="ob-sub">Selecciona tu meta principal y crearemos un plan personalizado para ti.</div>
+    <div class="ob-options">
+      <div class="ob-option" onclick="selectOption(this,'obj','muscle')">
+        <div class="ob-option-ico">💪</div>
+        <div class="ob-option-label">Ganar músculo</div>
+        <div class="ob-option-sub">Aumentar masa muscular</div>
+      </div>
+      <div class="ob-option" onclick="selectOption(this,'obj','fat')">
+        <div class="ob-option-ico">🔥</div>
+        <div class="ob-option-label">Perder grasa</div>
+        <div class="ob-option-sub">Quemar calorías</div>
+      </div>
+      <div class="ob-option" onclick="selectOption(this,'obj','fit')">
+        <div class="ob-option-ico">⚡</div>
+        <div class="ob-option-label">Estar en forma</div>
+        <div class="ob-option-sub">Fitness general</div>
+      </div>
+      <div class="ob-option" onclick="selectOption(this,'obj','strength')">
+        <div class="ob-option-ico">🏋️</div>
+        <div class="ob-option-label">Ganar fuerza</div>
+        <div class="ob-option-sub">Aumentar potencia</div>
+      </div>
+    </div>
+    <button class="btn-fire" onclick="nextStep(2)">CONTINUAR →</button>
+  </div>
+
+  <!-- STEP 2: DATOS -->
+  <div class="ob-step" id="step2">
+    <div class="ob-title">TUS <span>DATOS</span></div>
+    <div class="ob-sub">Necesitamos conocerte para crear tu plan perfecto.</div>
+    <div class="ob-field"><label>Tu nombre</label><input class="ob-input" id="userName" placeholder="¿Cómo te llamas?"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="ob-field"><label>Edad</label><input class="ob-input" type="number" id="userAge" placeholder="25"></div>
+      <div class="ob-field"><label>Género</label>
+        <select class="ob-input" id="userGender">
+          <option value="">Seleccionar</option>
+          <option value="M">Masculino</option>
+          <option value="F">Femenino</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="ob-field"><label>Peso actual (kg)</label><input class="ob-input" type="number" id="userWeight" placeholder="70"></div>
+      <div class="ob-field"><label>Estatura (cm)</label><input class="ob-input" type="number" id="userHeight" placeholder="175"></div>
+    </div>
+    <div class="ob-field"><label>Peso objetivo (kg)</label><input class="ob-input" type="number" id="userTargetWeight" placeholder="65"></div>
+    <button class="btn-fire" onclick="nextStep(3)">CONTINUAR →</button>
+    <button class="btn-outline" onclick="nextStep(1)">← Atrás</button>
+  </div>
+
+  <!-- STEP 3: NIVEL Y LUGAR -->
+  <div class="ob-step" id="step3">
+    <div class="ob-title">¿DÓNDE <span>ENTRENAS</span>?</div>
+    <div class="ob-sub">Adaptamos los ejercicios según tu lugar y nivel.</div>
+    <div class="ob-options">
+      <div class="ob-option" onclick="selectOption(this,'place','gym')">
+        <div class="ob-option-ico">🏋️</div>
+        <div class="ob-option-label">Gimnasio</div>
+        <div class="ob-option-sub">Con máquinas y pesas</div>
+      </div>
+      <div class="ob-option" onclick="selectOption(this,'place','home')">
+        <div class="ob-option-ico">🏠</div>
+        <div class="ob-option-label">Casa</div>
+        <div class="ob-option-sub">Sin equipamiento</div>
+      </div>
+      <div class="ob-option" onclick="selectOption(this,'place','both')">
+        <div class="ob-option-ico">🌍</div>
+        <div class="ob-option-label">Ambos</div>
+        <div class="ob-option-sub">Flexible</div>
+      </div>
+      <div class="ob-option" onclick="selectOption(this,'level','beg')">
+        <div class="ob-option-ico">🌱</div>
+        <div class="ob-option-label">Principiante</div>
+        <div class="ob-option-sub">Menos de 6 meses</div>
+      </div>
+      <div class="ob-option" onclick="selectOption(this,'level','int')">
+        <div class="ob-option-ico">⚡</div>
+        <div class="ob-option-label">Intermedio</div>
+        <div class="ob-option-sub">6 meses - 2 años</div>
+      </div>
+      <div class="ob-option" onclick="selectOption(this,'level','adv')">
+        <div class="ob-option-ico">🔥</div>
+        <div class="ob-option-label">Avanzado</div>
+        <div class="ob-option-sub">Más de 2 años</div>
+      </div>
+    </div>
+    <button class="btn-fire" onclick="nextStep(4)">CONTINUAR →</button>
+    <button class="btn-outline" onclick="nextStep(2)">← Atrás</button>
+  </div>
+
+  <!-- STEP 4: SALUD -->
+  <div class="ob-step" id="step4">
+    <div class="ob-title">¿ALGUNA <span>CONDICIÓN</span>?</div>
+    <div class="ob-sub">Opcional pero importante para tu seguridad. Tu plan se adaptará.</div>
+    <div class="ob-field"><label>¿Tienes alguna lesión o condición de salud?</label>
+      <input class="ob-input" id="userHealth" placeholder="Ej: rodilla lesionada, presión alta... (opcional)">
+    </div>
+    <div class="ob-field"><label>¿En cuánto tiempo quieres lograr tu objetivo?</label>
+      <select class="ob-input" id="userTime">
+        <option value="1">1 mes (intensivo)</option>
+        <option value="3" selected>3 meses (recomendado)</option>
+        <option value="6">6 meses (gradual)</option>
+        <option value="12">12 meses (sostenible)</option>
+      </select>
+    </div>
+    <div class="ob-field"><label>¿Cuántos días por semana puedes entrenar?</label>
+      <select class="ob-input" id="userDays">
+        <option value="3">3 días</option>
+        <option value="4" selected>4 días</option>
+        <option value="5">5 días</option>
+        <option value="6">6 días</option>
+      </select>
+    </div>
+    <button class="btn-fire" onclick="finishOnboard()">¡CREAR MI PLAN! 🔥</button>
+    <button class="btn-outline" onclick="nextStep(3)">← Atrás</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app" id="mainApp">
+
+  <!-- HOME PAGE -->
+  <div class="page active" id="pageHome">
+    <div class="app-header">
+      <div class="app-header-top">
+        <div>
+          <div class="app-greeting">Buen día 💪</div>
+          <div class="app-name">Fit<span>IA</span></div>
+        </div>
+        <div class="header-right">
+          <div class="streak-badge">🔥 <span id="streakCount">7</span> días</div>
+          <div class="avatar-btn" id="homeAvatar">M</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-card">
+      <div class="hero-label">Tu plan de hoy</div>
+      <div class="hero-title" id="heroPlanTitle">DÍA 1 — PECHO & TRÍCEPS</div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hero-stat-val" id="heroExCount">6</div><div class="hero-stat-label">Ejercicios</div></div>
+        <div class="hero-stat"><div class="hero-stat-val">45</div><div class="hero-stat-label">Minutos</div></div>
+        <div class="hero-stat"><div class="hero-stat-val" id="heroCalBurn">380</div><div class="hero-stat-label">Calorías</div></div>
+      </div>
+    </div>
+
+    <div class="tip-card">
+      <div class="tip-header"><div class="tip-dot"></div><div class="tip-badge">IA Consejo</div></div>
+      <div class="tip-text" id="aiTip">Hoy es día de pecho. Recuerda calentar 5 min antes. Descansa 60-90 segundos entre series para máxima hipertrofia. ¡Tú puedes!</div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">ENTRENAMIENTO DE HOY</div>
+        <div class="section-link" onclick="showPage('pageGym')">Ver todo</div>
+      </div>
+      <div class="exercise-list" id="todayExercises"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-title">BATIDOS RECOMENDADOS</div><div class="section-link" onclick="showPage('pageShakes')">Ver todos</div></div>
+      <div class="shake-scroll" id="homeShakes"></div>
+    </div>
+  </div>
+
+  <!-- GYM PAGE -->
+  <div class="page" id="pageGym">
+    <div class="app-header">
+      <div class="app-header-top">
+        <div><div class="app-greeting">Ejercicios</div><div class="app-name">GIMNA<span>SIO</span></div></div>
+      </div>
+    </div>
+    <div class="filter-bar" id="gymFilters"></div>
+    <div class="exercise-grid" id="gymExercises"></div>
+  </div>
+
+  <!-- HOME WORKOUTS PAGE -->
+  <div class="page" id="pageHome2">
+    <div class="app-header">
+      <div class="app-header-top">
+        <div><div class="app-greeting">Ejercicios</div><div class="app-name">EN <span>CASA</span></div></div>
+      </div>
+    </div>
+    <div class="filter-bar" id="homeFilters"></div>
+    <div class="exercise-grid" id="homeExercises"></div>
+  </div>
+
+  <!-- NUTRITION PAGE -->
+  <div class="page" id="pageNutrition">
+    <div class="app-header">
+      <div class="app-header-top">
+        <div><div class="app-greeting">Nutrición</div><div class="app-name">PLAN <span>ALIMENTICIO</span></div></div>
+      </div>
+    </div>
+
+    <div class="macro-card">
+      <div class="macro-title">MACROS DEL DÍA</div>
+      <div class="macro-grid">
+        <div class="macro-item"><div class="macro-val" style="color:var(--fire)" id="macroCalories">2,200</div><div class="macro-label">Calorías</div></div>
+        <div class="macro-item"><div class="macro-val" style="color:#4F8EFF" id="macroProtein">165g</div><div class="macro-label">Proteína</div></div>
+        <div class="macro-item"><div class="macro-val" style="color:var(--gold)" id="macroCarbs">220g</div><div class="macro-label">Carbos</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Progreso de proteína</div>
+      <div class="macro-bar-bg"><div class="macro-bar-fill" style="width:65%;background:linear-gradient(90deg,#4F8EFF,#00C8FF)"></div></div>
+    </div>
+
+    <div class="section"><div class="section-title" style="margin-bottom:14px">PLAN DE COMIDAS</div></div>
+    <div id="mealPlan"></div>
+
+    <div class="section" style="margin-top:8px">
+      <div class="section-header"><div class="section-title">BATIDOS & SUPLEMENTOS</div><div class="section-link" onclick="showPage('pageShakes')">Ver todos</div></div>
+      <div class="shake-scroll" id="nutritionShakes"></div>
+    </div>
+
+    <div class="section locked" style="margin-top:8px" onclick="openPremium()">
+      <div class="section-title" style="margin-bottom:14px">PLAN PERSONALIZADO PRO</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;opacity:0.4">
+        <div style="font-size:13px;color:var(--text2)">Plan de alimentación 100% personalizado con tus datos específicos, objetivos y condición de salud generado por IA...</div>
+      </div>
+      <div class="lock-overlay">
+        <div class="lock-icon">👑</div>
+        <div class="lock-text">DESBLOQUEAR CON PRO</div>
+        <div class="lock-sub">Plan 100% personalizado con IA</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHAKES PAGE -->
+  <div class="page" id="pageShakes">
+    <div class="app-header">
+      <div class="app-header-top">
+        <div><div class="app-greeting">Nutrición</div><div class="app-name">BATIDOS & <span>SUPLEMENTOS</span></div></div>
+      </div>
+    </div>
+    <div class="filter-bar" id="shakeFilters"></div>
+    <div class="exercise-grid" id="shakesList"></div>
+  </div>
+
+  <!-- PROFILE PAGE -->
+  <div class="page" id="pageProfile">
+    <div class="app-header">
+      <div class="app-header-top">
+        <div><div class="app-greeting">Tu cuenta</div><div class="app-name">MI <span>PERFIL</span></div></div>
+      </div>
+    </div>
+
+    <div class="profile-hero">
+      <div class="profile-avatar" id="profileAvatar">M</div>
+      <div class="profile-name" id="profileName">Miguel</div>
+      <div class="profile-goal" id="profileGoal">🎯 Ganar músculo · 3 meses</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-box-val" id="statWeight">70</div><div class="stat-box-label">Peso kg</div></div>
+      <div class="stat-box"><div class="stat-box-val" id="statBmi">22.4</div><div class="stat-box-label">IMC</div></div>
+      <div class="stat-box"><div class="stat-box-val">🔥7</div><div class="stat-box-label">Racha días</div></div>
+    </div>
+
+    <div class="progress-card">
+      <div class="prog-title">PROGRESO HACIA TU OBJETIVO</div>
+      <div class="prog-row"><div class="prog-label">Peso actual</div><div class="prog-val" id="progCurrent">70 kg</div></div>
+      <div class="prog-row"><div class="prog-label">Peso objetivo</div><div class="prog-val" id="progTarget">80 kg</div></div>
+      <div class="prog-bar-bg"><div class="prog-bar-fill" style="width:30%"></div></div>
+      <div style="font-size:12px;color:var(--text2)">30% completado · 10 kg para llegar a tu meta</div>
+    </div>
+
+    <div class="section">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+        <div onclick="openPremium()" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">👑</span><div><div style="font-size:14px;font-weight:600;color:var(--gold)">Actualizar a PRO</div><div style="font-size:11px;color:var(--text2)">Desbloquea plan personalizado IA</div></div></div>
+          <span style="color:var(--fire)">→</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">⚙️</span><div style="font-size:14px;color:var(--text)">Configuración</div></div>
+          <span style="color:var(--text2)">→</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer">
+          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">📊</span><div style="font-size:14px;color:var(--text)">Mi progreso detallado</div></div>
+          <span style="color:var(--text2)">→</span>
+        </div>
+        <div onclick="doLogout()" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;border-top:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">🚪</span><div style="font-size:14px;color:var(--red,#FF4F4F)">Cerrar sesión</div></div>
+          <span style="color:var(--text2)">→</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end app -->
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav" id="bottomNav" style="display:none">
+  <button class="nav-item active" onclick="navTo('pageHome',this)"><div class="nav-icon">🏠</div>Inicio</button>
+  <button class="nav-item" onclick="navTo('pageGym',this);renderGym()"><div class="nav-icon">🏋️</div>Gimnasio</button>
+  <button class="nav-item" onclick="navTo('pageHome2',this);renderHomeWorkouts()"><div class="nav-icon">🏠💪</div>Casa</button>
+  <button class="nav-item" onclick="navTo('pageNutrition',this)"><div class="nav-icon">🥗</div>Nutrición</button>
+  <button class="nav-item" onclick="navTo('pageProfile',this)"><div class="nav-icon">👤</div>Perfil</button>
+</div>
+
+<!-- PREMIUM MODAL -->
+<div class="premium-overlay" id="premiumOverlay" onclick="if(event.target.id=='premiumOverlay')closePremium()">
+  <div class="premium-modal">
+    <div class="premium-handle"></div>
+    <div class="premium-crown">👑</div>
+    <div class="premium-title">HAZTE PRO</div>
+    <div class="premium-sub">Desbloquea tu plan 100% personalizado con IA y acelera tus resultados</div>
+    <div class="plans-grid">
+      <div class="plan-opt" onclick="selectPlan(this)">
+        <div class="plan-opt-name">MENSUAL</div>
+        <div class="plan-opt-price">S/19.90</div>
+        <div class="plan-opt-period">por mes</div>
+        <div class="plan-features">
+          <div class="plan-feature">Plan IA personalizado</div>
+          <div class="plan-feature">Ejercicios ilimitados</div>
+          <div class="plan-feature">Batidos premium</div>
+          <div class="plan-feature">Sin anuncios</div>
+        </div>
+      </div>
+      <div class="plan-opt popular" onclick="selectPlan(this)">
+        <div class="popular-badge">MÁS POPULAR</div>
+        <div class="plan-opt-name">ANUAL</div>
+        <div class="plan-opt-price">S/9.90</div>
+        <div class="plan-opt-period">por mes · S/118.80/año</div>
+        <div class="plan-features">
+          <div class="plan-feature">Todo lo del mensual</div>
+          <div class="plan-feature">Ahorra 50%</div>
+          <div class="plan-feature">Plan de comidas pro</div>
+          <div class="plan-feature">Soporte prioritario</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn-gold" onclick="closePremium();showToast('🚀 ¡Próximamente disponible!')">ACTIVAR PRO AHORA</button>
+    <button class="btn-cancel-modal" onclick="closePremium()">Continuar con versión gratuita</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+const FITIA_URL = 'https://rekdooqznmheyrclktt.supabase.co';
+const FITIA_KEY = 'sb_publishable_FOxGpShDClqtV6nPfYJbKg_v-rLEEdI';
+const sb = supabase.createClient(FITIA_URL, FITIA_KEY);
+let currentUser = null;
+let authMode = 'login';
+
+// Hide auth screen initially (splash shows first)
+document.getElementById('authScreen').style.display = 'none';
+
+function switchAuthTab(mode) {
+  authMode = mode;
+  document.getElementById('authTabLogin').style.background = mode==='login' ? '#1A1510' : 'transparent';
+  document.getElementById('authTabLogin').style.color = mode==='login' ? '#FFF8F0' : '#A89880';
+  document.getElementById('authTabReg').style.background = mode==='register' ? '#1A1510' : 'transparent';
+  document.getElementById('authTabReg').style.color = mode==='register' ? '#FFF8F0' : '#A89880';
+  document.getElementById('loginForm').style.display = mode==='login' ? 'block' : 'none';
+  document.getElementById('registerForm').style.display = mode==='register' ? 'block' : 'none';
+  document.getElementById('authMsg').style.display = 'none';
+}
+
+function showAuthMsg(msg, type) {
+  const el = document.getElementById('authMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = type==='error' ? 'rgba(255,79,79,0.1)' : 'rgba(255,77,0,0.1)';
+  el.style.color = type==='error' ? '#FF4F4F' : '#FF8C00';
+  el.style.border = type==='error' ? '1px solid rgba(255,79,79,0.2)' : '1px solid rgba(255,77,0,0.2)';
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if(!email||!pass) { showAuthMsg('Completa todos los campos','error'); return; }
+  const {error} = await sb.auth.signInWithPassword({email, password:pass});
+  if(error) { showAuthMsg('Correo o contraseña incorrectos','error'); return; }
+}
+
+async function doRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPass').value;
+  if(!name||!email||!pass) { showAuthMsg('Completa todos los campos','error'); return; }
+  if(pass.length<6) { showAuthMsg('La contraseña debe tener al menos 6 caracteres','error'); return; }
+  const {error} = await sb.auth.signUp({email, password:pass, options:{data:{name}}});
+  if(error) { showAuthMsg(error.message,'error'); return; }
+  showAuthMsg('¡Cuenta creada! Iniciando sesión...','success');
+  setTimeout(()=>sb.auth.signInWithPassword({email,password:pass}),1000);
+}
+
+sb.auth.onAuthStateChange((event, session) => {
+  if(session?.user) {
+    currentUser = session.user;
+    document.getElementById('authScreen').style.display = 'none';
+    // Check if needs onboarding
+    const savedData = localStorage.getItem('fitia_user_'+currentUser.id);
+    if(savedData) {
+      userData = JSON.parse(savedData);
+      if(currentUser) localStorage.setItem('fitia_user_'+currentUser.id, JSON.stringify(userData));
+  document.getElementById('onboard').classList.remove('active');
+      document.getElementById('mainApp').classList.add('active');
+      document.getElementById('bottomNav').style.display = 'flex';
+      initApp();
+    } else {
+      if(currentUser) {
+    const savedData = localStorage.getItem('fitia_user_'+currentUser.id);
+    if(savedData) {
+      userData = JSON.parse(savedData);
+      document.getElementById('mainApp').classList.add('active');
+      document.getElementById('bottomNav').style.display = 'flex';
+      initApp();
+    } else {
+      document.getElementById('onboard').classList.add('active');
+    }
+  } else {
+    document.getElementById('authScreen').style.display = 'flex';
+  }
+    }
+  } else {
+    currentUser = null;
+  }
+});
+
+// DATA
+const GYM_EXERCISES = [
+  {name:'Press de Banca',muscle:'Pecho',sets:'4x10',ico:'🏋️',tags:['Pecho','Músculo'],machine:true,goal:'muscle'},
+  {name:'Sentadilla',muscle:'Piernas',sets:'4x12',ico:'🦵',tags:['Piernas','Fuerza'],machine:true,goal:'strength'},
+  {name:'Peso Muerto',muscle:'Espalda',sets:'3x8',ico:'💪',tags:['Espalda','Fuerza'],machine:false,goal:'strength'},
+  {name:'Jalón al Pecho',muscle:'Espalda',sets:'4x12',ico:'🔽',tags:['Espalda','Músculo'],machine:true,goal:'muscle'},
+  {name:'Press Militar',muscle:'Hombros',sets:'4x10',ico:'⬆️',tags:['Hombros','Músculo'],machine:true,goal:'muscle'},
+  {name:'Curl de Bíceps',muscle:'Bíceps',sets:'3x12',ico:'💪',tags:['Bíceps','Músculo'],machine:false,goal:'muscle'},
+  {name:'Extensión Tríceps',muscle:'Tríceps',sets:'3x12',ico:'🔱',tags:['Tríceps','Músculo'],machine:true,goal:'muscle'},
+  {name:'Remo con Barra',muscle:'Espalda',sets:'4x10',ico:'🚣',tags:['Espalda','Músculo'],machine:false,goal:'muscle'},
+  {name:'Prensa de Piernas',muscle:'Piernas',sets:'4x15',ico:'🦿',tags:['Piernas','Músculo'],machine:true,goal:'muscle'},
+  {name:'Máquina de Vuelos',muscle:'Pecho',sets:'3x15',ico:'🦋',tags:['Pecho','Músculo'],machine:true,goal:'muscle'},
+  {name:'Elevaciones Laterales',muscle:'Hombros',sets:'3x15',ico:'↔️',tags:['Hombros','Definición'],machine:false,goal:'fit'},
+  {name:'Caminadora Inclinada',muscle:'Cardio',sets:'30 min',ico:'🏃',tags:['Cardio','Grasa'],machine:true,goal:'fat'},
+  {name:'Elíptica',muscle:'Cardio',sets:'25 min',ico:'⭕',tags:['Cardio','Grasa'],machine:true,goal:'fat'},
+  {name:'Remo Ergómetro',muscle:'Cardio',sets:'20 min',ico:'🚣',tags:['Cardio','Full body'],machine:true,goal:'fat'},
+  {name:'Hip Thrust',muscle:'Glúteos',sets:'4x12',ico:'🍑',tags:['Glúteos','Músculo'],machine:false,goal:'muscle'},
+];
+
+const HOME_EXERCISES = [
+  {name:'Flexiones Diamante',muscle:'Pecho/Tríceps',sets:'4x15',ico:'💎',tags:['Pecho','Músculo'],goal:'muscle'},
+  {name:'Sentadillas',muscle:'Piernas',sets:'4x20',ico:'🦵',tags:['Piernas','Fuerza'],goal:'strength'},
+  {name:'Burpees',muscle:'Full Body',sets:'4x10',ico:'🔥',tags:['Cardio','Grasa'],goal:'fat'},
+  {name:'Planchas',muscle:'Core',sets:'3x60s',ico:'⏱️',tags:['Core','Fuerza'],goal:'strength'},
+  {name:'Zancadas',muscle:'Piernas',sets:'3x12c/lado',ico:'🚶',tags:['Piernas','Músculo'],goal:'muscle'},
+  {name:'Dominadas',muscle:'Espalda',sets:'3x8',ico:'🔝',tags:['Espalda','Músculo'],goal:'muscle'},
+  {name:'Mountain Climbers',muscle:'Cardio/Core',sets:'4x30s',ico:'🧗',tags:['Cardio','Grasa'],goal:'fat'},
+  {name:'Puentes de Glúteo',muscle:'Glúteos',sets:'4x20',ico:'🍑',tags:['Glúteos','Músculo'],goal:'muscle'},
+  {name:'Jump Squats',muscle:'Piernas/Cardio',sets:'4x15',ico:'⬆️',tags:['Cardio','Grasa'],goal:'fat'},
+  {name:'Fondos en Silla',muscle:'Tríceps',sets:'3x12',ico:'🪑',tags:['Tríceps','Músculo'],goal:'muscle'},
+  {name:'Superman',muscle:'Espalda Baja',sets:'3x15',ico:'🦸',tags:['Espalda','Fuerza'],goal:'strength'},
+  {name:'Elevaciones de Piernas',muscle:'Abdomen',sets:'3x20',ico:'🦵',tags:['Core','Definición'],goal:'fit'},
+];
+
+const SHAKES = [
+  {name:'Batido de Masa',ico:'💪',goal:'Ganar músculo',cals:'450 kcal',time:'Post-entreno',ingredients:['2 tazas leche','1 banana','2 cdas proteína whey','2 cdas mantequilla maní','1 cda miel'],prep:'Mezcla todos los ingredientes en licuadora por 30 segundos. Consume inmediatamente después del entrenamiento.',tag:'muscle'},
+  {name:'Fat Burner',ico:'🔥',goal:'Perder grasa',cals:'120 kcal',time:'Mañana',ingredients:['1 taza agua fría','1 cda proteína isolada','1 cda spirulina','Jugo de medio limón','Hielo al gusto'],prep:'Mezcla en licuadora. Tomar 30 min antes del entrenamiento para máxima quema de grasa.',tag:'fat'},
+  {name:'Batido Verde',ico:'🌿',goal:'Energía y salud',cals:'180 kcal',time:'Cualquier hora',ingredients:['1 taza espinaca','1 manzana verde','1 pepino','Jengibre','1 taza agua de coco'],prep:'Licúa todos los ingredientes. Rico en antioxidantes y vitaminas para recuperación.',tag:'fit'},
+  {name:'Recuperación',ico:'🫐',goal:'Post-entreno',cals:'280 kcal',time:'Post-entreno',ingredients:['1 taza arándanos','1 banana','1 cda proteína whey','1 taza leche de almendras','1 cda chía'],prep:'Licúa y consume en los primeros 30 minutos post-entrenamiento para máxima recuperación muscular.',tag:'muscle'},
+  {name:'Creatina Natural',ico:'⚡',goal:'Fuerza y potencia',cals:'200 kcal',time:'Pre-entreno',ingredients:['200ml jugo de sandía','1 cdita creatina monohidrato','1 banana','200ml agua','Sal de himalaya'],prep:'Mezcla bien todos los ingredientes. Tomar 30-45 minutos antes del entrenamiento.',tag:'strength'},
+  {name:'Batido Durmiente',ico:'🌙',goal:'Recuperación nocturna',cals:'320 kcal',time:'Antes de dormir',ingredients:['1 taza leche entera','2 cdas caseína','1 cda mantequilla almendras','Canela al gusto'],prep:'Mezcla y consume 30 minutos antes de dormir. La caseína libera aminoácidos toda la noche.',tag:'muscle'},
+];
+
+const MEALS = [
+  {time:'DESAYUNO (7:00 AM)',cals:'550 kcal',foods:['Avena con banana y miel','3 huevos revueltos','1 vaso leche entera']},
+  {time:'MEDIA MAÑANA (10:00 AM)',cals:'200 kcal',foods:['Yogur griego con granola','1 puñado nueces']},
+  {time:'ALMUERZO (1:00 PM)',cals:'700 kcal',foods:['150g pollo a la plancha','1 taza arroz integral','Ensalada mixta con aceite oliva','1 fruta']},
+  {time:'MERIENDA (4:00 PM)',cals:'300 kcal',foods:['Batido de proteína','1 banana','Tostadas integrales']},
+  {time:'CENA (7:00 PM)',cals:'600 kcal',foods:['150g salmón al horno','Verduras salteadas','Camote al vapor','1 vaso leche']},
+];
+
+let userData = {name:'Usuario',goal:'muscle',weight:70,height:175,targetWeight:80,age:25,gender:'M',place:'gym',level:'int',health:'',time:3,days:4};
+let gymFilter = 'Todos';
+let homeFilter = 'Todos';
+let shakeFilter = 'Todos';
+let completedExercises = new Set();
+
+// INIT
+setTimeout(() => {
+  if(currentUser) {
+    const savedData = localStorage.getItem('fitia_user_'+currentUser.id);
+    if(savedData) {
+      userData = JSON.parse(savedData);
+      document.getElementById('mainApp').classList.add('active');
+      document.getElementById('bottomNav').style.display = 'flex';
+      initApp();
+    } else {
+      document.getElementById('onboard').classList.add('active');
+    }
+  } else {
+    document.getElementById('authScreen').style.display = 'flex';
+  }
+}, 2800);
+
+// ONBOARDING
+let selectedOptions = {};
+function selectOption(el, type, val) {
+  document.querySelectorAll(`.ob-option`).forEach(o => {
+    if(o.dataset.type === type) o.classList.remove('selected');
+  });
+  el.dataset.type = type;
+  el.classList.add('selected');
+  selectedOptions[type] = val;
+}
+
+function nextStep(n) {
+  document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step'+n).classList.add('active');
+  for(let i=1;i<=4;i++) {
+    document.getElementById('dot'+i).classList.toggle('done', i<=n);
+  }
+}
+
+function finishOnboard() {
+  const name = document.getElementById('userName').value || 'Atleta';
+  const age = parseInt(document.getElementById('userAge').value) || 25;
+  const weight = parseFloat(document.getElementById('userWeight').value) || 70;
+  const height = parseFloat(document.getElementById('userHeight').value) || 175;
+  const targetWeight = parseFloat(document.getElementById('userTargetWeight').value) || 75;
+  
+  userData = {
+    name, age, weight, height, targetWeight,
+    gender: document.getElementById('userGender').value || 'M',
+    goal: selectedOptions.obj || 'muscle',
+    place: selectedOptions.place || 'gym',
+    level: selectedOptions.level || 'int',
+    health: document.getElementById('userHealth').value,
+    time: parseInt(document.getElementById('userTime').value) || 3,
+    days: parseInt(document.getElementById('userDays').value) || 4
+  };
+  
+  if(currentUser) localStorage.setItem('fitia_user_'+currentUser.id, JSON.stringify(userData));
+  document.getElementById('onboard').classList.remove('active');
+  document.getElementById('mainApp').classList.add('active');
+  document.getElementById('bottomNav').style.display = 'flex';
+  initApp();
+}
+
+function initApp() {
+  const initial = userData.name.charAt(0).toUpperCase();
+  document.getElementById('homeAvatar').textContent = initial;
+  document.getElementById('profileAvatar').textContent = initial;
+  document.getElementById('profileName').textContent = userData.name;
+  
+  const goalLabels = {muscle:'💪 Ganar músculo',fat:'🔥 Perder grasa',fit:'⚡ Estar en forma',strength:'🏋️ Ganar fuerza'};
+  document.getElementById('profileGoal').textContent = goalLabels[userData.goal] + ' · ' + userData.time + ' meses';
+  document.getElementById('statWeight').textContent = userData.weight;
+  document.getElementById('progCurrent').textContent = userData.weight + ' kg';
+  document.getElementById('progTarget').textContent = userData.targetWeight + ' kg';
+  
+  const bmi = (userData.weight / ((userData.height/100)**2)).toFixed(1);
+  document.getElementById('statBmi').textContent = bmi;
+  
+  // Calculate calories
+  const bmr = userData.gender === 'M' 
+    ? 88.362 + (13.397 * userData.weight) + (4.799 * userData.height) - (5.677 * userData.age)
+    : 447.593 + (9.247 * userData.weight) + (3.098 * userData.height) - (4.330 * userData.age);
+  const tdee = Math.round(bmr * 1.55);
+  const targetCals = userData.goal === 'fat' ? tdee - 500 : tdee + 300;
+  document.getElementById('macroCalories').textContent = targetCals.toLocaleString();
+  document.getElementById('macroProtein').textContent = Math.round(userData.weight * 2.2) + 'g';
+  document.getElementById('macroCarbs').textContent = Math.round(targetCals * 0.4 / 4) + 'g';
+  document.getElementById('heroCalBurn').textContent = Math.round(bmr * 0.3);
+  
+  const tips = {
+    muscle: 'Hoy es día de pecho. Calienta 5 min antes. Descansa 60-90s entre series para máxima hipertrofia.',
+    fat: 'Mantén tu ritmo cardíaco entre 130-150 ppm para máxima quema de grasa. ¡Hidratate bien!',
+    fit: 'Combina cardio y fuerza hoy. 20 min cardio + circuito de ejercicios. ¡Lo darás todo!',
+    strength: 'Hoy trabajamos fuerza máxima. Series pesadas de 3-6 reps. Descansa 2-3 min entre series.'
+  };
+  document.getElementById('aiTip').textContent = tips[userData.goal];
+  
+  renderTodayExercises();
+  renderHomeShakes();
+  renderNutritionShakes();
+  renderMealPlan();
+}
+
+function renderTodayExercises() {
+  const filtered = GYM_EXERCISES.filter(e => e.goal === userData.goal || Math.random() > 0.5).slice(0,5);
+  document.getElementById('heroExCount').textContent = filtered.length;
+  document.getElementById('todayExercises').innerHTML = filtered.map((e,i) => `
+    <div class="exercise-item ${completedExercises.has(i)?'done':''}" onclick="toggleExercise(${i},this)">
+      <div class="exercise-ico">${e.ico}</div>
+      <div>
+        <div class="exercise-name">${e.name}</div>
+        <div class="exercise-meta">${e.muscle} · ${e.sets}</div>
+      </div>
+      <div class="exercise-check ${completedExercises.has(i)?'done':''}" id="check${i}">${completedExercises.has(i)?'✓':''}</div>
+    </div>
+  `).join('');
+}
+
+function toggleExercise(i, el) {
+  if(completedExercises.has(i)) completedExercises.delete(i);
+  else { completedExercises.add(i); showToast('✅ Ejercicio completado 🔥'); }
+  el.classList.toggle('done', completedExercises.has(i));
+  const check = document.getElementById('check'+i);
+  if(check){ check.classList.toggle('done', completedExercises.has(i)); check.textContent = completedExercises.has(i)?'✓':''; }
+}
+
+function renderHomeShakes() {
+  document.getElementById('homeShakes').innerHTML = SHAKES.slice(0,4).map(s => `
+    <div class="shake-card" onclick="showShakeDetail('${s.name}')">
+      <div class="shake-ico">${s.ico}</div>
+      <div class="shake-name">${s.name}</div>
+      <div class="shake-goal">${s.goal}</div>
+      <div class="shake-cal">${s.cals}</div>
+    </div>
+  `).join('');
+}
+
+function renderNutritionShakes() {
+  document.getElementById('nutritionShakes').innerHTML = SHAKES.map(s => `
+    <div class="shake-card" onclick="showShakeDetail('${s.name}')">
+      <div class="shake-ico">${s.ico}</div>
+      <div class="shake-name">${s.name}</div>
+      <div class="shake-goal">${s.goal}</div>
+      <div class="shake-cal">${s.cals}</div>
+    </div>
+  `).join('');
+}
+
+function renderMealPlan() {
+  document.getElementById('mealPlan').innerHTML = MEALS.map(m => `
+    <div class="meal-card">
+      <div class="meal-header">
+        <div class="meal-time">${m.time}</div>
+        <div class="meal-cals">${m.cals}</div>
+      </div>
+      <div class="meal-foods">
+        ${m.foods.map(f => `<div class="meal-food"><span>${f}</span></div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderGym() {
+  const filters = ['Todos','Pecho','Espalda','Piernas','Hombros','Bíceps','Tríceps','Glúteos','Cardio'];
+  document.getElementById('gymFilters').innerHTML = filters.map(f => 
+    `<button class="filter-btn ${gymFilter===f?'active':''}" onclick="setGymFilter('${f}',this)">${f}</button>`
+  ).join('');
+  
+  const filtered = gymFilter === 'Todos' ? GYM_EXERCISES : GYM_EXERCISES.filter(e => e.muscle.includes(gymFilter) || e.tags.some(t=>t===gymFilter));
+  document.getElementById('gymExercises').innerHTML = filtered.map(e => `
+    <div class="ex-card" onclick="showExDetail('${e.name}','${e.muscle}','${e.sets}','${e.ico}')">
+      <div class="ex-card-ico">${e.ico}</div>
+      <div>
+        <div class="ex-card-name">${e.name}</div>
+        <div class="ex-card-meta">${e.muscle} · ${e.sets} · ${e.machine?'🔧 Máquina':'💪 Peso libre'}</div>
+        <div class="ex-tags">${e.tags.map(t=>`<span class="ex-tag tag-muscle">${t}</span>`).join('')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function setGymFilter(f, btn) {
+  gymFilter = f;
+  renderGym();
+}
+
+function renderHomeWorkouts() {
+  const filters = ['Todos','Pecho','Piernas','Espalda','Core','Glúteos','Cardio'];
+  document.getElementById('homeFilters').innerHTML = filters.map(f =>
+    `<button class="filter-btn ${homeFilter===f?'active':''}" onclick="setHomeFilter('${f}',this)">${f}</button>`
+  ).join('');
+  
+  const filtered = homeFilter === 'Todos' ? HOME_EXERCISES : HOME_EXERCISES.filter(e => e.muscle.includes(homeFilter) || e.tags.some(t=>t===homeFilter));
+  document.getElementById('homeExercises').innerHTML = filtered.map(e => `
+    <div class="ex-card" onclick="showExDetail('${e.name}','${e.muscle}','${e.sets}','${e.ico}')">
+      <div class="ex-card-ico">${e.ico}</div>
+      <div>
+        <div class="ex-card-name">${e.name}</div>
+        <div class="ex-card-meta">${e.muscle} · ${e.sets} · 🏠 Sin equipo</div>
+        <div class="ex-tags">${e.tags.map(t=>`<span class="ex-tag tag-muscle">${t}</span>`).join('')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function setHomeFilter(f) { homeFilter = f; renderHomeWorkouts(); }
+
+function showExDetail(name, muscle, sets, ico) {
+  showToast(`${ico} ${name} — ${sets}`);
+}
+
+function showShakeDetail(name) {
+  const shake = SHAKES.find(s => s.name === name);
+  if(!shake) return;
+  alert(`${shake.ico} ${shake.name}\n\nIngredientes:\n${shake.ingredients.map((i,n)=>`${n+1}. ${i}`).join('\n')}\n\nPreparación:\n${shake.prep}\n\n⏱️ Momento: ${shake.time}\n🔥 ${shake.cals}`);
+}
+
+// NAV
+function navTo(pageId, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+}
+
+function showPage(pageId) {
+  navTo(pageId, null);
+  if(pageId === 'pageGym') renderGym();
+  if(pageId === 'pageHome2') renderHomeWorkouts();
+}
+
+// PREMIUM
+function openPremium() { document.getElementById('premiumOverlay').classList.add('open'); }
+function closePremium() { document.getElementById('premiumOverlay').classList.remove('open'); }
+function selectPlan(el) {
+  document.querySelectorAll('.plan-opt').forEach(p => p.style.borderColor = '');
+  el.style.borderColor = 'var(--gold)';
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  if(currentUser) localStorage.removeItem('fitia_user_'+currentUser.id);
+  currentUser = null;
+  document.getElementById('mainApp').classList.remove('active');
+  document.getElementById('bottomNav').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
