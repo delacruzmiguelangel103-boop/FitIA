@@ -1,1 +1,9 @@
-file:///C:/Users/delac/Downloads/fitia-prototipo%20(1).html
+FitIA
+Tu entrenador con IA
+Iniciar sesión
+Registrarse
+Correo
+tucorreo@gmail.com
+Contraseña
+Tu contraseña
+ENTRAR →
